@@ -1,0 +1,1186 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Pump — Train Together</title>
+  <meta name="description" content="The social fitness app built for gym goers. Log workouts, track PRs, and see what your gym crew is lifting — in real time." />
+  <meta property="og:title" content="Pump — Train Together" />
+  <meta property="og:description" content="The social fitness app for gym goers. Log workouts, track PRs, and see what your gym crew is lifting." />
+  <meta property="og:type" content="website" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:ital,opsz,wght@0,14..32,300;0,14..32,400;0,14..32,500;0,14..32,600;0,14..32,700;0,14..32,800;0,14..32,900;1,14..32,400&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet" />
+
+  <style>
+    /* ── RESET & TOKENS ─────────────────────────────────────────── */
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    :root {
+      --black:    #0A0B0D;
+      --charcoal: #13141A;
+      --surface:  #1C1D24;
+      --lifted:   #23252E;
+      --border:   rgba(255,255,255,0.07);
+      --border2:  rgba(255,255,255,0.04);
+      --muted:    #545763;
+      --faint:    rgba(255,255,255,0.35);
+      --white:    #F0F1F5;
+      --orange:   #FF5C28;
+      --orange2:  #FF8A00;
+      --gold:     #FFB800;
+      --green:    #22C55E;
+      --r:        16px;
+      --r-lg:     24px;
+    }
+    html { scroll-behavior: smooth; }
+    body {
+      font-family: 'Inter', sans-serif;
+      background: var(--black);
+      color: var(--white);
+      -webkit-font-smoothing: antialiased;
+      overflow-x: hidden;
+    }
+
+    /* ── NOISE GRAIN ────────────────────────────────────────────── */
+    body::after {
+      content: '';
+      position: fixed;
+      inset: 0;
+      pointer-events: none;
+      z-index: 999;
+      opacity: 0.025;
+      background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)'/%3E%3C/svg%3E");
+      background-size: 180px 180px;
+    }
+
+    /* ── DOT GRID ───────────────────────────────────────────────── */
+    .grid-bg {
+      position: fixed;
+      inset: 0;
+      pointer-events: none;
+      z-index: 0;
+      background-image:
+        radial-gradient(circle, rgba(255,255,255,0.06) 1px, transparent 1px);
+      background-size: 28px 28px;
+      mask-image: radial-gradient(ellipse 80% 80% at 50% 50%, black 40%, transparent 100%);
+    }
+
+    /* ── GRADIENT ORBS ──────────────────────────────────────────── */
+    .orb {
+      position: fixed;
+      border-radius: 50%;
+      filter: blur(80px);
+      pointer-events: none;
+      z-index: 0;
+      animation: drift 18s ease-in-out infinite;
+    }
+    .orb-1 {
+      width: 520px; height: 520px;
+      background: radial-gradient(circle, rgba(255,92,40,0.22) 0%, transparent 70%);
+      top: -160px; right: -80px;
+      animation-delay: 0s;
+    }
+    .orb-2 {
+      width: 360px; height: 360px;
+      background: radial-gradient(circle, rgba(255,138,0,0.14) 0%, transparent 70%);
+      bottom: 10%; left: -100px;
+      animation-delay: -7s;
+    }
+    @keyframes drift {
+      0%,100% { transform: translate(0,0) scale(1); }
+      33%      { transform: translate(30px,-40px) scale(1.05); }
+      66%      { transform: translate(-20px,30px) scale(0.97); }
+    }
+
+    /* ── UTILITIES ──────────────────────────────────────────────── */
+    .container { max-width: 1100px; margin: 0 auto; padding: 0 24px; }
+    .sr-only { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0,0,0,0); }
+
+    /* ── SCROLL REVEAL ──────────────────────────────────────────── */
+    .reveal {
+      opacity: 0;
+      transform: translateY(28px);
+      transition: opacity 0.65s cubic-bezier(.22,1,.36,1), transform 0.65s cubic-bezier(.22,1,.36,1);
+    }
+    .reveal.visible { opacity: 1; transform: none; }
+    .reveal-delay-1 { transition-delay: 0.10s; }
+    .reveal-delay-2 { transition-delay: 0.20s; }
+    .reveal-delay-3 { transition-delay: 0.30s; }
+    .reveal-delay-4 { transition-delay: 0.40s; }
+
+    /* ── NAV ────────────────────────────────────────────────────── */
+    nav {
+      position: fixed;
+      top: 0; left: 0; right: 0;
+      z-index: 200;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 16px 32px;
+      background: rgba(10,11,13,0.7);
+      backdrop-filter: blur(20px);
+      -webkit-backdrop-filter: blur(20px);
+      border-bottom: 1px solid var(--border);
+      transition: background 0.3s;
+    }
+    .nav-logo {
+      font-size: 20px;
+      font-weight: 900;
+      letter-spacing: -0.05em;
+      color: var(--white);
+      text-decoration: none;
+      display: flex;
+      align-items: center;
+      gap: 2px;
+    }
+    .nav-logo-dot {
+      width: 6px; height: 6px;
+      background: var(--orange);
+      border-radius: 50%;
+      margin-left: 2px;
+      margin-bottom: 10px;
+      animation: pulse-dot 2.4s ease-in-out infinite;
+    }
+    @keyframes pulse-dot {
+      0%,100% { transform: scale(1); opacity: 1; }
+      50%      { transform: scale(1.5); opacity: 0.6; }
+    }
+    .nav-right { display: flex; align-items: center; gap: 20px; }
+    .nav-pill {
+      font-size: 13px;
+      font-weight: 600;
+      color: var(--faint);
+      text-decoration: none;
+      letter-spacing: -0.01em;
+      transition: color 0.15s;
+    }
+    .nav-pill:hover { color: var(--white); }
+    .btn {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      font-family: 'Inter', sans-serif;
+      font-weight: 700;
+      border: none;
+      cursor: pointer;
+      text-decoration: none;
+      transition: opacity 0.15s, transform 0.1s;
+      position: relative;
+      overflow: hidden;
+    }
+    .btn::after {
+      content: '';
+      position: absolute;
+      inset: 0;
+      background: linear-gradient(105deg, transparent 40%, rgba(255,255,255,0.18) 50%, transparent 60%);
+      transform: translateX(-100%);
+      transition: transform 0.5s;
+    }
+    .btn:hover::after { transform: translateX(100%); }
+    .btn:hover { opacity: 0.9; }
+    .btn:active { transform: scale(0.97); }
+    .btn-sm {
+      font-size: 13px;
+      padding: 9px 18px;
+      border-radius: 999px;
+      background: var(--orange);
+      color: #fff;
+    }
+    .btn-primary {
+      font-size: 15px;
+      padding: 14px 24px;
+      border-radius: 12px;
+      background: linear-gradient(135deg, var(--orange), var(--orange2));
+      color: #fff;
+      white-space: nowrap;
+    }
+
+    /* ── HERO ───────────────────────────────────────────────────── */
+    .hero {
+      position: relative;
+      z-index: 1;
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      align-items: center;
+      gap: 64px;
+      min-height: 100vh;
+      padding: 120px 0 80px;
+    }
+    .hero-left { max-width: 540px; }
+    .hero-right {
+      display: flex;
+      justify-content: center;
+      align-items: center;
+    }
+
+    .eyebrow {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      background: rgba(255,92,40,0.1);
+      border: 1px solid rgba(255,92,40,0.25);
+      border-radius: 999px;
+      padding: 5px 14px 5px 10px;
+      font-size: 12px;
+      font-weight: 600;
+      color: var(--orange);
+      letter-spacing: 0.02em;
+      margin-bottom: 28px;
+    }
+    .eyebrow-dot {
+      width: 6px; height: 6px;
+      background: var(--orange);
+      border-radius: 50%;
+      animation: pulse-dot 2s infinite;
+    }
+
+    h1 {
+      font-size: clamp(48px, 5.5vw, 76px);
+      font-weight: 900;
+      line-height: 1.0;
+      letter-spacing: -0.04em;
+      margin-bottom: 20px;
+    }
+    h1 .grad {
+      background: linear-gradient(135deg, var(--orange) 0%, var(--orange2) 100%);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+    }
+    .hero-sub {
+      font-size: 17px;
+      color: var(--faint);
+      line-height: 1.65;
+      margin-bottom: 40px;
+      max-width: 420px;
+    }
+    .hero-input-row {
+      display: flex;
+      gap: 8px;
+      margin-bottom: 14px;
+    }
+    .input {
+      flex: 1;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 14px 18px;
+      font-size: 15px;
+      font-family: 'Inter', sans-serif;
+      color: var(--white);
+      outline: none;
+      transition: border-color 0.15s, box-shadow 0.15s;
+      min-width: 0;
+    }
+    .input::placeholder { color: var(--muted); }
+    .input:focus {
+      border-color: rgba(255,92,40,0.5);
+      box-shadow: 0 0 0 3px rgba(255,92,40,0.08);
+    }
+    .input-error { border-color: #EF4444 !important; }
+    .hero-meta { font-size: 13px; color: var(--muted); display: flex; align-items: center; gap: 6px; }
+    .hero-meta-avatars { display: flex; }
+    .meta-av {
+      width: 20px; height: 20px;
+      border-radius: 50%;
+      border: 1.5px solid var(--black);
+      margin-left: -5px;
+    }
+    .meta-av:first-child { margin-left: 0; }
+    .meta-av.c1 { background: linear-gradient(135deg,#667eea,#764ba2); }
+    .meta-av.c2 { background: linear-gradient(135deg,#f093fb,#f5576c); }
+    .meta-av.c3 { background: linear-gradient(135deg,#4facfe,#00f2fe); }
+    .meta-av.c4 { background: linear-gradient(135deg,#43e97b,#38f9d7); }
+
+    /* ── PHONE MOCKUP ───────────────────────────────────────────── */
+    .phone-wrap {
+      width: 280px;
+      flex-shrink: 0;
+      animation: float 5s ease-in-out infinite;
+      filter: drop-shadow(0 40px 60px rgba(0,0,0,0.7));
+    }
+    @keyframes float {
+      0%,100% { transform: translateY(0px) rotate(-1deg); }
+      50%      { transform: translateY(-14px) rotate(1deg); }
+    }
+    .phone {
+      background: var(--charcoal);
+      border-radius: 40px;
+      border: 1.5px solid rgba(255,255,255,0.1);
+      padding: 14px;
+      position: relative;
+      box-shadow: inset 0 1px 0 rgba(255,255,255,0.06);
+    }
+    .phone-notch {
+      position: absolute;
+      top: 14px; left: 50%;
+      transform: translateX(-50%);
+      width: 100px; height: 24px;
+      background: var(--black);
+      border-radius: 0 0 16px 16px;
+      z-index: 10;
+    }
+    .phone-screen {
+      background: var(--black);
+      border-radius: 28px;
+      overflow: hidden;
+      padding-top: 36px;
+    }
+
+    /* App UI */
+    .app-status { height: 8px; }
+    .app-bar {
+      padding: 8px 14px 6px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+    .app-bar-title { font-size: 20px; font-weight: 900; letter-spacing: -0.03em; }
+    .app-ava {
+      width: 30px; height: 30px;
+      border-radius: 50%;
+      background: linear-gradient(135deg, var(--orange), var(--orange2));
+    }
+    .in-progress-bar {
+      margin: 0 10px 8px;
+      background: linear-gradient(135deg, var(--orange), var(--orange2));
+      border-radius: 12px;
+      padding: 10px 12px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+    .ipb-t { font-size: 11px; font-weight: 700; }
+    .ipb-s { font-size: 10px; opacity: 0.75; margin-top: 1px; }
+    .ipb-btn {
+      background: rgba(0,0,0,0.25);
+      border-radius: 7px;
+      padding: 5px 10px;
+      font-size: 10px;
+      font-weight: 700;
+    }
+    .feed-item {
+      margin: 0 10px 8px;
+      background: var(--charcoal);
+      border-radius: 12px;
+      padding: 10px;
+      border: 1px solid var(--border);
+    }
+    .fi-head { display: flex; align-items: center; gap: 8px; margin-bottom: 8px; }
+    .fi-av {
+      width: 28px; height: 28px;
+      border-radius: 50%;
+      flex-shrink: 0;
+    }
+    .fi-av.a { background: linear-gradient(135deg,#667eea,#764ba2); }
+    .fi-av.b { background: linear-gradient(135deg,#f093fb,#f5576c); }
+    .fi-name { font-size: 11px; font-weight: 700; }
+    .fi-time { font-size: 10px; color: var(--muted); }
+    .fi-gym {
+      margin-left: auto;
+      font-size: 10px;
+      color: var(--orange);
+      background: rgba(255,92,40,0.1);
+      border-radius: 5px;
+      padding: 2px 6px;
+      font-weight: 600;
+    }
+    .fi-title { font-size: 12px; font-weight: 700; margin-bottom: 4px; letter-spacing: -0.01em; }
+    .fi-pr {
+      display: inline-flex;
+      align-items: center;
+      gap: 3px;
+      background: rgba(255,184,0,0.1);
+      border: 1px solid rgba(255,184,0,0.25);
+      border-radius: 5px;
+      padding: 2px 7px;
+      font-size: 10px;
+      font-weight: 700;
+      color: var(--gold);
+      margin-bottom: 6px;
+    }
+    .fi-stats {
+      display: flex;
+      gap: 12px;
+      margin-bottom: 7px;
+    }
+    .fi-stat strong {
+      display: block;
+      font-size: 12px;
+      font-weight: 700;
+      font-family: 'JetBrains Mono', monospace;
+    }
+    .fi-stat span { font-size: 9px; color: var(--muted); }
+    .fi-actions {
+      display: flex;
+      gap: 12px;
+      padding-top: 7px;
+      border-top: 1px solid var(--border2);
+    }
+    .fi-act { font-size: 10px; color: var(--muted); font-weight: 600; }
+    .fi-act.hot { color: var(--orange); }
+
+    /* ── MARQUEE ────────────────────────────────────────────────── */
+    .marquee-section {
+      position: relative;
+      z-index: 1;
+      padding: 24px 0;
+      border-top: 1px solid var(--border);
+      border-bottom: 1px solid var(--border);
+      overflow: hidden;
+      background: rgba(255,255,255,0.015);
+      mask-image: linear-gradient(to right, transparent, black 15%, black 85%, transparent);
+    }
+    .marquee-track {
+      display: flex;
+      gap: 0;
+      width: max-content;
+      animation: marquee 28s linear infinite;
+    }
+    .marquee-track:hover { animation-play-state: paused; }
+    @keyframes marquee {
+      from { transform: translateX(0); }
+      to   { transform: translateX(-50%); }
+    }
+    .marquee-item {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      padding: 0 32px;
+      font-size: 13px;
+      color: var(--faint);
+      font-weight: 500;
+      white-space: nowrap;
+      border-right: 1px solid var(--border);
+    }
+    .marquee-item .dot { width: 5px; height: 5px; border-radius: 50%; flex-shrink: 0; }
+    .dot-orange { background: var(--orange); }
+    .dot-gold   { background: var(--gold); }
+    .dot-green  { background: var(--green); }
+
+    /* ── SECTION LABELS ─────────────────────────────────────────── */
+    .section-label {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      font-size: 12px;
+      font-weight: 700;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      color: var(--orange);
+      margin-bottom: 16px;
+    }
+    .section-label::before {
+      content: '';
+      width: 16px; height: 1px;
+      background: var(--orange);
+    }
+    .section-title {
+      font-size: clamp(30px, 4vw, 50px);
+      font-weight: 900;
+      letter-spacing: -0.035em;
+      line-height: 1.05;
+      max-width: 640px;
+      margin-bottom: 16px;
+    }
+    .section-sub {
+      font-size: 17px;
+      color: var(--faint);
+      max-width: 500px;
+      line-height: 1.65;
+    }
+
+    /* ── PROBLEM ────────────────────────────────────────────────── */
+    .problem-section { position: relative; z-index: 1; padding: 112px 0; }
+    .problem-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 1px;
+      background: var(--border);
+      border-radius: 20px;
+      overflow: hidden;
+      margin-top: 56px;
+    }
+    .problem-card {
+      background: var(--charcoal);
+      padding: 36px 32px;
+      position: relative;
+      transition: background 0.25s;
+    }
+    .problem-card:hover { background: var(--surface); }
+    .problem-card::before {
+      content: '';
+      position: absolute;
+      top: 0; left: 0; right: 0;
+      height: 1px;
+      background: linear-gradient(to right, transparent, var(--orange), transparent);
+      opacity: 0;
+      transition: opacity 0.3s;
+    }
+    .problem-card:hover::before { opacity: 1; }
+    .problem-icon { font-size: 30px; margin-bottom: 20px; display: block; }
+    .problem-card h3 { font-size: 16px; font-weight: 700; margin-bottom: 10px; letter-spacing: -0.01em; }
+    .problem-card p { font-size: 14px; color: var(--faint); line-height: 1.65; }
+
+    /* ── HOW IT WORKS ───────────────────────────────────────────── */
+    .how-section {
+      position: relative;
+      z-index: 1;
+      padding: 112px 0;
+      background: var(--charcoal);
+      border-top: 1px solid var(--border);
+      border-bottom: 1px solid var(--border);
+    }
+    .steps {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 48px;
+      margin-top: 64px;
+    }
+    .step-num {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 11px;
+      font-weight: 500;
+      color: var(--orange);
+      letter-spacing: 0.08em;
+      margin-bottom: 20px;
+    }
+    .step-icon-wrap {
+      width: 48px; height: 48px;
+      border-radius: 14px;
+      background: rgba(255,92,40,0.08);
+      border: 1px solid rgba(255,92,40,0.18);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 22px;
+      margin-bottom: 20px;
+      transition: background 0.2s, border-color 0.2s;
+    }
+    .step:hover .step-icon-wrap {
+      background: rgba(255,92,40,0.16);
+      border-color: rgba(255,92,40,0.35);
+    }
+    .step h3 { font-size: 20px; font-weight: 800; letter-spacing: -0.02em; margin-bottom: 10px; }
+    .step p { font-size: 14px; color: var(--faint); line-height: 1.65; }
+
+    /* ── FEATURES ───────────────────────────────────────────────── */
+    .features-section { position: relative; z-index: 1; padding: 112px 0; }
+    .features-bento {
+      display: grid;
+      grid-template-columns: repeat(12, 1fr);
+      grid-template-rows: auto;
+      gap: 12px;
+      margin-top: 56px;
+    }
+    .bento-card {
+      background: var(--charcoal);
+      border: 1px solid var(--border);
+      border-radius: 20px;
+      padding: 28px;
+      position: relative;
+      overflow: hidden;
+      transition: border-color 0.2s, background 0.2s;
+    }
+    .bento-card:hover {
+      border-color: rgba(255,92,40,0.3);
+      background: var(--surface);
+    }
+    .bento-card::before {
+      content: '';
+      position: absolute;
+      inset: 0;
+      background: linear-gradient(135deg, rgba(255,92,40,0.04) 0%, transparent 60%);
+      opacity: 0;
+      transition: opacity 0.3s;
+    }
+    .bento-card:hover::before { opacity: 1; }
+    .bc-1 { grid-column: span 5; }
+    .bc-2 { grid-column: span 7; }
+    .bc-3 { grid-column: span 4; }
+    .bc-4 { grid-column: span 4; }
+    .bc-5 { grid-column: span 4; }
+    .bc-6 { grid-column: span 6; }
+    .bc-7 { grid-column: span 6; }
+    .bento-icon { font-size: 28px; margin-bottom: 16px; display: block; }
+    .bento-card h3 { font-size: 16px; font-weight: 700; letter-spacing: -0.01em; margin-bottom: 8px; }
+    .bento-card p { font-size: 14px; color: var(--faint); line-height: 1.6; }
+    .bento-tag {
+      display: inline-flex;
+      align-items: center;
+      gap: 5px;
+      font-size: 11px;
+      font-weight: 600;
+      color: var(--orange);
+      background: rgba(255,92,40,0.08);
+      border: 1px solid rgba(255,92,40,0.18);
+      border-radius: 999px;
+      padding: 4px 10px;
+      margin-top: 16px;
+    }
+    /* Mini PR sparkline in bento card */
+    .pr-sparkline {
+      margin-top: 20px;
+      display: flex;
+      align-items: flex-end;
+      gap: 4px;
+      height: 48px;
+    }
+    .spark-bar {
+      flex: 1;
+      background: var(--surface);
+      border-radius: 4px;
+      transition: background 0.2s;
+    }
+    .spark-bar.hi { background: linear-gradient(to top, var(--orange), var(--orange2)); }
+    .bc-1:hover .spark-bar { background: var(--lifted); }
+    .bc-1:hover .spark-bar.hi { background: linear-gradient(to top, var(--orange), var(--orange2)); }
+
+    /* Mini streak counter in bento card */
+    .streak-display {
+      margin-top: 20px;
+      display: flex;
+      align-items: baseline;
+      gap: 6px;
+    }
+    .streak-num {
+      font-size: 56px;
+      font-weight: 900;
+      font-family: 'JetBrains Mono', monospace;
+      letter-spacing: -0.04em;
+      background: linear-gradient(135deg, var(--orange), var(--orange2));
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+      line-height: 1;
+    }
+    .streak-label { font-size: 13px; color: var(--muted); font-weight: 500; }
+
+    /* ── STATS ──────────────────────────────────────────────────── */
+    .stats-section {
+      position: relative;
+      z-index: 1;
+      padding: 80px 0;
+      border-top: 1px solid var(--border);
+      background: var(--charcoal);
+    }
+    .stats-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 1px;
+      background: var(--border);
+      border-radius: 20px;
+      overflow: hidden;
+    }
+    .stat-cell {
+      background: var(--charcoal);
+      padding: 48px 40px;
+      text-align: center;
+    }
+    .stat-num {
+      font-size: clamp(42px, 5vw, 64px);
+      font-weight: 900;
+      letter-spacing: -0.04em;
+      font-family: 'JetBrains Mono', monospace;
+      background: linear-gradient(135deg, var(--orange), var(--orange2));
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+      line-height: 1;
+      display: block;
+    }
+    .stat-desc { font-size: 14px; color: var(--muted); margin-top: 10px; font-weight: 500; max-width: 180px; margin-left: auto; margin-right: auto; line-height: 1.5; }
+
+    /* ── FINAL CTA ──────────────────────────────────────────────── */
+    .cta-section {
+      position: relative;
+      z-index: 1;
+      padding: 140px 0;
+      text-align: center;
+    }
+    .cta-section h2 {
+      font-size: clamp(40px, 6vw, 72px);
+      font-weight: 900;
+      letter-spacing: -0.04em;
+      line-height: 1.0;
+      max-width: 680px;
+      margin: 0 auto 20px;
+    }
+    .cta-section p { font-size: 17px; color: var(--faint); margin: 0 auto 48px; max-width: 380px; line-height: 1.6; }
+    .cta-form-wrap { max-width: 420px; margin: 0 auto; }
+
+    /* ── SUCCESS ────────────────────────────────────────────────── */
+    .success-block {
+      display: none;
+      background: rgba(34,197,94,0.07);
+      border: 1px solid rgba(34,197,94,0.25);
+      border-radius: 14px;
+      padding: 18px 24px;
+      font-size: 15px;
+      font-weight: 600;
+      color: var(--green);
+      text-align: center;
+    }
+
+    /* ── FOOTER ─────────────────────────────────────────────────── */
+    footer {
+      position: relative;
+      z-index: 1;
+      padding: 32px 32px;
+      border-top: 1px solid var(--border);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      flex-wrap: wrap;
+      gap: 12px;
+    }
+    .footer-logo {
+      font-size: 17px;
+      font-weight: 900;
+      letter-spacing: -0.04em;
+      display: flex;
+      align-items: center;
+    }
+    footer p { font-size: 13px; color: var(--muted); }
+
+    /* ── RESPONSIVE ─────────────────────────────────────────────── */
+    @media (max-width: 900px) {
+      .hero {
+        grid-template-columns: 1fr;
+        padding-top: 100px;
+        text-align: center;
+      }
+      .hero-left { max-width: 100%; }
+      .hero-sub { max-width: 100%; }
+      .hero-right { display: none; }
+      .hero-input-row { flex-direction: column; }
+      .hero-meta { justify-content: center; }
+      .problem-grid, .steps { grid-template-columns: 1fr; }
+      .features-bento { grid-template-columns: 1fr 1fr; }
+      .bc-1, .bc-2, .bc-3, .bc-4, .bc-5, .bc-6, .bc-7 { grid-column: span 2; }
+      .stats-grid { grid-template-columns: 1fr; }
+      nav { padding: 14px 20px; }
+      .nav-pill { display: none; }
+    }
+    @media (max-width: 560px) {
+      .features-bento { grid-template-columns: 1fr; }
+      .bc-1, .bc-2, .bc-3, .bc-4, .bc-5, .bc-6, .bc-7 { grid-column: span 1; }
+      footer { justify-content: center; text-align: center; }
+    }
+  </style>
+</head>
+<body>
+
+  <div class="grid-bg" aria-hidden="true"></div>
+  <div class="orb orb-1" aria-hidden="true"></div>
+  <div class="orb orb-2" aria-hidden="true"></div>
+
+  <!-- NAV -->
+  <nav>
+    <a href="#" class="nav-logo" aria-label="Pump home">
+      PUMP<span class="nav-logo-dot"></span>
+    </a>
+    <div class="nav-right">
+      <a href="#how" class="nav-pill">How it works</a>
+      <a href="#features" class="nav-pill">Features</a>
+      <a href="#waitlist" class="btn btn-sm">Join Waitlist</a>
+    </div>
+  </nav>
+
+  <!-- HERO -->
+  <section class="container">
+    <div class="hero">
+      <div class="hero-left">
+        <div class="eyebrow reveal">
+          <span class="eyebrow-dot"></span>
+          Coming to iOS — Join the waitlist
+        </div>
+        <h1 class="reveal reveal-delay-1">
+          Your gym<br>has a<br><span class="grad">community.</span>
+        </h1>
+        <p class="hero-sub reveal reveal-delay-2">
+          Log workouts, track PRs, and see what your gym crew is lifting in real time. The social layer gym culture has always needed.
+        </p>
+        <div class="hero-input-row reveal reveal-delay-3" id="hero-form">
+          <input class="input" type="email" id="hero-email" placeholder="your@email.com" aria-label="Email address" />
+          <button class="btn btn-primary" onclick="joinWaitlist('hero')">Get Early Access</button>
+        </div>
+        <div class="hero-meta reveal reveal-delay-4" id="hero-meta">
+          <div class="hero-meta-avatars">
+            <div class="meta-av c1"></div>
+            <div class="meta-av c2"></div>
+            <div class="meta-av c3"></div>
+            <div class="meta-av c4"></div>
+          </div>
+          <span>2,400+ gym goers already on the list</span>
+        </div>
+        <div class="success-block" id="hero-success">You're on the list. We'll be in touch. 💪</div>
+      </div>
+
+      <div class="hero-right reveal reveal-delay-2">
+        <div class="phone-wrap">
+          <div class="phone">
+            <div class="phone-notch"></div>
+            <div class="phone-screen">
+              <div class="app-status"></div>
+              <div class="app-bar">
+                <span class="app-bar-title">Feed</span>
+                <div class="app-ava"></div>
+              </div>
+              <div class="in-progress-bar">
+                <div>
+                  <div class="ipb-t">Push Day · 4 exercises</div>
+                  <div class="ipb-s">42 min · 12,450 kg volume</div>
+                </div>
+                <div class="ipb-btn">Resume</div>
+              </div>
+              <div class="feed-item">
+                <div class="fi-head">
+                  <div class="fi-av a"></div>
+                  <div>
+                    <div class="fi-name">Marcus R.</div>
+                    <div class="fi-time">23 min ago</div>
+                  </div>
+                  <div class="fi-gym">Fitness First</div>
+                </div>
+                <div class="fi-title">Leg Day 🦵</div>
+                <div class="fi-pr">🏆 PR — Back Squat 140 kg</div>
+                <div class="fi-stats">
+                  <div class="fi-stat"><strong>1h 12m</strong><span>Duration</span></div>
+                  <div class="fi-stat"><strong>18,200</strong><span>kg volume</span></div>
+                  <div class="fi-stat"><strong>6</strong><span>exercises</span></div>
+                </div>
+                <div class="fi-actions">
+                  <div class="fi-act hot">💪 24</div>
+                  <div class="fi-act">💬 3</div>
+                </div>
+              </div>
+              <div class="feed-item">
+                <div class="fi-head">
+                  <div class="fi-av b"></div>
+                  <div>
+                    <div class="fi-name">Priya K.</div>
+                    <div class="fi-time">1h ago</div>
+                  </div>
+                  <div class="fi-gym">Anytime Fit</div>
+                </div>
+                <div class="fi-title">Upper Body Pull</div>
+                <div class="fi-stats">
+                  <div class="fi-stat"><strong>48m</strong><span>Duration</span></div>
+                  <div class="fi-stat"><strong>9,800</strong><span>kg volume</span></div>
+                </div>
+                <div class="fi-actions">
+                  <div class="fi-act">💪 11</div>
+                  <div class="fi-act">💬 1</div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- MARQUEE -->
+  <div class="marquee-section" aria-hidden="true">
+    <div class="marquee-track">
+      <!-- duplicated for seamless loop -->
+      <div class="marquee-item"><span class="dot dot-gold"></span> Marcus broke his Back Squat PR · 140 kg</div>
+      <div class="marquee-item"><span class="dot dot-orange"></span> Priya · Day 23 streak 🔥</div>
+      <div class="marquee-item"><span class="dot dot-green"></span> Jake logged 8 workouts this week</div>
+      <div class="marquee-item"><span class="dot dot-gold"></span> Sofia hit a Bench Press PR · 80 kg</div>
+      <div class="marquee-item"><span class="dot dot-orange"></span> 2,400+ gym goers on the waitlist</div>
+      <div class="marquee-item"><span class="dot dot-green"></span> Aiden · 100th workout logged 🎉</div>
+      <div class="marquee-item"><span class="dot dot-gold"></span> Leila's Deadlift hit 120 kg</div>
+      <div class="marquee-item"><span class="dot dot-orange"></span> Chris trained at Gold's Gym · 5am</div>
+      <div class="marquee-item"><span class="dot dot-green"></span> Nadia broke her OHP record · 55 kg</div>
+      <div class="marquee-item"><span class="dot dot-gold"></span> Marcus broke his Back Squat PR · 140 kg</div>
+      <div class="marquee-item"><span class="dot dot-orange"></span> Priya · Day 23 streak 🔥</div>
+      <div class="marquee-item"><span class="dot dot-green"></span> Jake logged 8 workouts this week</div>
+      <div class="marquee-item"><span class="dot dot-gold"></span> Sofia hit a Bench Press PR · 80 kg</div>
+      <div class="marquee-item"><span class="dot dot-orange"></span> 2,400+ gym goers on the waitlist</div>
+      <div class="marquee-item"><span class="dot dot-green"></span> Aiden · 100th workout logged 🎉</div>
+      <div class="marquee-item"><span class="dot dot-gold"></span> Leila's Deadlift hit 120 kg</div>
+      <div class="marquee-item"><span class="dot dot-orange"></span> Chris trained at Gold's Gym · 5am</div>
+      <div class="marquee-item"><span class="dot dot-green"></span> Nadia broke her OHP record · 55 kg</div>
+    </div>
+  </div>
+
+  <!-- THE PROBLEM -->
+  <section class="problem-section">
+    <div class="container">
+      <div class="section-label reveal">The Problem</div>
+      <h2 class="section-title reveal reveal-delay-1">Every gym app is a solo tool.<br>Your gym isn't solo.</h2>
+      <p class="section-sub reveal reveal-delay-2">Strava turned running into a social sport. Nobody did that for the gym. Until now.</p>
+      <div class="problem-grid">
+        <div class="problem-card reveal reveal-delay-1">
+          <span class="problem-icon">📓</span>
+          <h3>You're logging in silence</h3>
+          <p>Notes, Hevy, a notebook — you track your sets but nobody else sees them. Your 20 kg bench increase went unnoticed.</p>
+        </div>
+        <div class="problem-card reveal reveal-delay-2">
+          <span class="problem-icon">🏝️</span>
+          <h3>Your gym crew is scattered</h3>
+          <p>Some post to Instagram, some use Strava for cardio. There's no shared home base for gym culture.</p>
+        </div>
+        <div class="problem-card reveal reveal-delay-3">
+          <span class="problem-icon">📉</span>
+          <h3>Motivation fades alone</h3>
+          <p>The people who train with a community train more often, more consistently. Accountability changes everything.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- HOW IT WORKS -->
+  <section class="how-section" id="how">
+    <div class="container">
+      <div class="section-label reveal">How It Works</div>
+      <h2 class="section-title reveal reveal-delay-1">Three things. That's it.</h2>
+      <div class="steps">
+        <div class="step reveal reveal-delay-1">
+          <div class="step-num">01 —</div>
+          <div class="step-icon-wrap">🏋️</div>
+          <h3>Log your workout</h3>
+          <p>Start a session, add exercises, log sets. Fast enough to use between reps. Works offline, syncs instantly.</p>
+        </div>
+        <div class="step reveal reveal-delay-2">
+          <div class="step-num">02 —</div>
+          <div class="step-icon-wrap">🏆</div>
+          <h3>Break a PR</h3>
+          <p>Pump detects personal records automatically. Every time you lift heavier or do more reps than ever — it knows, and it celebrates.</p>
+        </div>
+        <div class="step reveal reveal-delay-3">
+          <div class="step-num">03 —</div>
+          <div class="step-icon-wrap">👥</div>
+          <h3>Share with your crew</h3>
+          <p>Your workout posts to your followers' feed in real time. Kudos, comments, community. The gym, connected.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- FEATURES BENTO -->
+  <section class="features-section" id="features">
+    <div class="container">
+      <div class="section-label reveal">Features</div>
+      <h2 class="section-title reveal reveal-delay-1">Everything your gym life needs.</h2>
+      <div class="features-bento">
+        <div class="bento-card bc-1 reveal reveal-delay-1">
+          <span class="bento-icon">🏆</span>
+          <h3>PR Tracking</h3>
+          <p>Epley formula. Automatic detection. Celebrated every single time with confetti and a haptic that feels like a fist bump.</p>
+          <div class="pr-sparkline">
+            <div class="spark-bar" style="height:30%"></div>
+            <div class="spark-bar" style="height:45%"></div>
+            <div class="spark-bar" style="height:40%"></div>
+            <div class="spark-bar" style="height:55%"></div>
+            <div class="spark-bar" style="height:50%"></div>
+            <div class="spark-bar" style="height:65%"></div>
+            <div class="spark-bar" style="height:60%"></div>
+            <div class="spark-bar hi" style="height:100%"></div>
+          </div>
+        </div>
+        <div class="bento-card bc-2 reveal reveal-delay-2">
+          <span class="bento-icon">🔥</span>
+          <h3>Streak Counter</h3>
+          <p>Front and center. Your followers see it. Nothing drives consistency like a streak you don't want to break.</p>
+          <div class="streak-display">
+            <div class="streak-num" id="streak-counter" data-target="23">0</div>
+            <div class="streak-label">days in a row</div>
+          </div>
+        </div>
+        <div class="bento-card bc-3 reveal reveal-delay-1">
+          <span class="bento-icon">📡</span>
+          <h3>Live Social Feed</h3>
+          <p>See your gym crew's workouts update in real time. Give kudos, leave comments, stay connected.</p>
+        </div>
+        <div class="bento-card bc-4 reveal reveal-delay-2">
+          <span class="bento-icon">📍</span>
+          <h3>Gym Check-in</h3>
+          <p>Tag your gym. See who's there. Join the local leaderboard.</p>
+          <div class="bento-tag">500+ gyms indexed</div>
+        </div>
+        <div class="bento-card bc-5 reveal reveal-delay-3">
+          <span class="bento-icon">🍎</span>
+          <h3>Apple Health Sync</h3>
+          <p>Every workout syncs to Apple Health automatically.</p>
+          <div class="bento-tag">Apple Watch — coming soon</div>
+        </div>
+        <div class="bento-card bc-6 reveal reveal-delay-1">
+          <span class="bento-icon">📊</span>
+          <h3>Volume & Progress</h3>
+          <p>Total volume per session, per week, per exercise. Your body of work, visualised over time.</p>
+        </div>
+        <div class="bento-card bc-7 reveal reveal-delay-2">
+          <span class="bento-icon">⚡</span>
+          <h3>Offline First</h3>
+          <p>Gym Wi-Fi is terrible. Pump logs your sets offline and syncs the moment you reconnect. Nothing is ever lost.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- STATS -->
+  <section class="stats-section">
+    <div class="container">
+      <div class="stats-grid">
+        <div class="stat-cell reveal reveal-delay-1">
+          <span class="stat-num" data-counter data-target="3" data-suffix="x">0</span>
+          <p class="stat-desc">more consistent when you train with a community</p>
+        </div>
+        <div class="stat-cell reveal reveal-delay-2">
+          <span class="stat-num" data-counter data-target="500" data-suffix="+">0</span>
+          <p class="stat-desc">exercises in the built-in library, day one</p>
+        </div>
+        <div class="stat-cell reveal reveal-delay-3">
+          <span class="stat-num" data-counter data-target="0" data-suffix="">0</span>
+          <p class="stat-desc">calorie tracking. Pump is about strength, not dieting.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- FINAL CTA -->
+  <section class="cta-section" id="waitlist">
+    <div class="container">
+      <h2 class="reveal">Ready to<br><span class="grad">train together?</span></h2>
+      <p class="reveal reveal-delay-1">Free. iOS. Coming soon. Join the waitlist and get early access.</p>
+      <div class="cta-form-wrap reveal reveal-delay-2">
+        <div class="hero-input-row" id="cta-form">
+          <input class="input" type="email" id="cta-email" placeholder="your@email.com" aria-label="Email address" />
+          <button class="btn btn-primary" onclick="joinWaitlist('cta')">Join Waitlist</button>
+        </div>
+        <div class="success-block" id="cta-success">You're in. See you at the gym. 💪</div>
+      </div>
+    </div>
+  </section>
+
+  <!-- FOOTER -->
+  <footer>
+    <div class="footer-logo">PUMP<span class="nav-logo-dot"></span></div>
+    <p>Built by gym goers, for gym goers. &copy; 2026 Pump.</p>
+  </footer>
+
+  <script>
+    // ── FORM ENDPOINT ──────────────────────────────────────────────
+    // Sign up at formspree.io, create a form, replace YOUR_FORM_ID:
+    const FORM_ENDPOINT = 'https://formspree.io/f/YOUR_FORM_ID';
+
+    // ── SCROLL REVEAL ──────────────────────────────────────────────
+    const observer = new IntersectionObserver(
+      (entries) => entries.forEach(e => { if (e.isIntersecting) e.target.classList.add('visible'); }),
+      { threshold: 0.12, rootMargin: '0px 0px -40px 0px' }
+    );
+    document.querySelectorAll('.reveal').forEach(el => observer.observe(el));
+
+    // ── COUNTER ANIMATION ──────────────────────────────────────────
+    const counterObs = new IntersectionObserver((entries) => {
+      entries.forEach(e => {
+        if (!e.isIntersecting) return;
+        const el = e.target;
+        const target = +el.dataset.target;
+        const suffix = el.dataset.suffix || '';
+        const duration = 1400;
+        const start = performance.now();
+        const update = (now) => {
+          const t = Math.min((now - start) / duration, 1);
+          const ease = t < 0.5 ? 2 * t * t : -1 + (4 - 2 * t) * t;
+          el.textContent = Math.round(ease * target) + suffix;
+          if (t < 1) requestAnimationFrame(update);
+        };
+        requestAnimationFrame(update);
+        counterObs.unobserve(el);
+      });
+    }, { threshold: 0.5 });
+    document.querySelectorAll('[data-counter]').forEach(el => counterObs.observe(el));
+
+    // ── STREAK COUNTER ANIMATION ───────────────────────────────────
+    const streakEl = document.getElementById('streak-counter');
+    if (streakEl) {
+      const streakObs = new IntersectionObserver(([e]) => {
+        if (!e.isIntersecting) return;
+        const target = +streakEl.dataset.target;
+        const duration = 1000;
+        const start = performance.now();
+        const tick = (now) => {
+          const t = Math.min((now - start) / duration, 1);
+          const ease = 1 - Math.pow(1 - t, 3);
+          streakEl.textContent = Math.round(ease * target);
+          if (t < 1) requestAnimationFrame(tick);
+        };
+        requestAnimationFrame(tick);
+        streakObs.unobserve(streakEl);
+      }, { threshold: 0.4 });
+      streakObs.observe(streakEl);
+    }
+
+    // ── WAITLIST FORM ──────────────────────────────────────────────
+    async function joinWaitlist(source) {
+      const emailId = source === 'hero' ? 'hero-email' : 'cta-email';
+      const formId  = source === 'hero' ? 'hero-form'  : 'cta-form';
+      const succId  = source === 'hero' ? 'hero-success': 'cta-success';
+      const metaId  = source === 'hero' ? 'hero-meta'  : null;
+
+      const emailEl = document.getElementById(emailId);
+      const email   = emailEl.value.trim();
+
+      if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+        emailEl.classList.add('input-error');
+        emailEl.focus();
+        setTimeout(() => emailEl.classList.remove('input-error'), 1800);
+        return;
+      }
+
+      const btn = document.querySelector(`#${formId} button`);
+      const orig = btn.textContent;
+      btn.textContent = 'Joining…';
+      btn.disabled = true;
+
+      try {
+        await fetch(FORM_ENDPOINT, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
+          body: JSON.stringify({ email, source, ts: new Date().toISOString() }),
+        });
+      } catch (_) { /* optimistic — show success regardless */ }
+
+      document.getElementById(formId).style.display = 'none';
+      if (metaId) document.getElementById(metaId).style.display = 'none';
+      const succ = document.getElementById(succId);
+      succ.style.display = 'block';
+      succ.style.animation = 'fadeUp 0.4s ease forwards';
+
+      // Local fallback storage
+      try {
+        const list = JSON.parse(localStorage.getItem('pump_wl') || '[]');
+        list.push({ email, source, ts: Date.now() });
+        localStorage.setItem('pump_wl', JSON.stringify(list));
+      } catch (_) {}
+    }
+
+    // Enter key on inputs
+    document.querySelectorAll('input[type="email"]').forEach(inp => {
+      inp.addEventListener('keydown', e => {
+        if (e.key !== 'Enter') return;
+        joinWaitlist(inp.id.startsWith('hero') ? 'hero' : 'cta');
+      });
+    });
+
+    // ── NAV SCROLL TINT ────────────────────────────────────────────
+    window.addEventListener('scroll', () => {
+      document.querySelector('nav').style.background =
+        window.scrollY > 40
+          ? 'rgba(10,11,13,0.92)'
+          : 'rgba(10,11,13,0.7)';
+    }, { passive: true });
+  </script>
+
+  <style>
+    @keyframes fadeUp {
+      from { opacity: 0; transform: translateY(10px); }
+      to   { opacity: 1; transform: none; }
+    }
+  </style>
+</body>
+</html>
